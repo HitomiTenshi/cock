@@ -60,8 +60,9 @@ async function getLayerOrder() {
   return config.order.map(dir => dir.trim());
 }
 
-function getLayerImages(orderedDirs: string[]) {
-  return Promise.all(orderedDirs.map(dir => glob(`./layers/${dir}/**/*.png`)));
+async function getLayerImages(orderedDirs: string[]) {
+  const layerImages = await Promise.all(orderedDirs.map(dir => glob(`./layers/${dir}/**/*.png`)));
+  return layerImages.filter(layer => layer.length > 0);
 }
 
 async function getLayerSize(layerImages: string[][]) {
