@@ -1,4 +1,9 @@
-order:
+layerPath: ./layers
+outputPath: ./output
+countFrom: 1
+outputAmount: 0
+randomize: false
+layerOrder:
   - background
   - ball
   - eye color

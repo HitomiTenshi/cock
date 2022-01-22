@@ -1,17 +1,18 @@
 import {mkdir, readdir, readFile} from 'fs/promises';
-import sizeOf from 'image-size';
+import {join} from 'path';
 import {parse} from 'yaml';
+import sizeOf from 'image-size';
 import * as glob from 'fast-glob';
 import * as sharp from 'sharp';
 
-import {cartesian, LayerSize} from './lib';
+import {cartesian, Config, LayerSize, shuffle} from './lib';
 const BATCH_SIZE = 100;
 
 async function main() {
-  await mkdir('./output', {recursive: true});
-  const layerDirs = await getLayerDirectories();
-  const orderedDirs = await getLayerOrder();
-  const missingDir = layerDirs.find(layerDir => !orderedDirs.includes(layerDir));
+  const config = await getConfig();
+  await mkdir(config.outputPath, {recursive: true});
+  const layerDirs = await getLayerDirectories(config);
+  const missingDir = layerDirs.find(layerDir => !config.layerOrder.includes(layerDir));
 
   if (missingDir) {
     console.error(
@@ -21,16 +22,16 @@ async function main() {
     return;
   }
 
-  const layerImages = await getLayerImages(orderedDirs);
+  const layerImages = await getLayerImages(config);
   const layerSize = await getLayerSize(layerImages);
-  const imageCombinations = cartesian(...layerImages);
+  const imageCombinations = getImageCombinations(layerImages, config);
   console.log(`Generating ${imageCombinations.length} images...`);
-  await generateImages(imageCombinations, layerSize);
+  await generateImages(imageCombinations, layerSize, config);
   console.log('Done.');
 }
 
-async function getLayerDirectories() {
-  const dirent = await readdir('./layers', {withFileTypes: true});
+async function getLayerDirectories(config: Config) {
+  const dirent = await readdir(config.layerPath, {withFileTypes: true});
 
   return dirent.reduce((entries, entry) => {
     if (entry.isDirectory()) {
@@ -41,14 +42,15 @@ async function getLayerDirectories() {
   }, [] as string[]);
 }
 
-async function getLayerOrder() {
+async function getConfig() {
   const yml = await readFile('./config.yml', {encoding: 'utf8'});
-  const config = parse(yml) as {order: string[]};
-  return config.order.map(dir => dir.trim());
+  return parse(yml) as Config;
 }
 
-async function getLayerImages(orderedDirs: string[]) {
-  const layerImages = await Promise.all(orderedDirs.map(dir => glob(`./layers/${dir}/**/*.png`)));
+async function getLayerImages(config: Config) {
+  const layerImages = await Promise.all(
+    config.layerOrder.map(dir => glob(join(config.layerPath, dir, '**/*.png'))),
+  );
 
   return Promise.all(
     layerImages
@@ -81,7 +83,22 @@ async function getLayerSize(layerImages: Buffer[][]) {
   return layerSize;
 }
 
-async function generateImages(imageCombinations: Buffer[][], layerSize: LayerSize, index = 0) {
+function getImageCombinations(layerImages: Buffer[][], config: Config) {
+  const imageCombinations = cartesian(...layerImages);
+
+  if (config.randomize) {
+    shuffle(imageCombinations);
+  }
+
+  return config.outputAmount ? imageCombinations.slice(0, config.outputAmount) : imageCombinations;
+}
+
+async function generateImages(
+  imageCombinations: Buffer[][],
+  layerSize: LayerSize,
+  config: Config,
+  index = 0,
+) {
   const imageCombinationsBatch = imageCombinations.slice(index, index + BATCH_SIZE);
 
   if (imageCombinationsBatch.length > 0) {
@@ -98,11 +115,11 @@ async function generateImages(imageCombinations: Buffer[][], layerSize: LayerSiz
           },
         })
           .composite(imageCombination.map(image => ({input: image})))
-          .toFile(`./output/${i + index + 1}.png`),
+          .toFile(join(config.outputPath, `${i + index + config.countFrom}.png`)),
       ),
     );
 
-    await generateImages(imageCombinations, layerSize, index + BATCH_SIZE);
+    await generateImages(imageCombinations, layerSize, config, index + BATCH_SIZE);
   }
 }
 

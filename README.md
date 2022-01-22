@@ -15,7 +15,16 @@ Layer images credit goes to: https://github.com/HashLips
 
 Place your layer images under the `layers` directory.
 
-Modify `config.yml` to add your own layer directories. Make sure that all configured directories in your layer order exist, otherwise an error will be thrown.
+Modify `config.yml` to add your own layer directories. Make sure that all configured directories in your `layerOrder` exist, otherwise an error will be thrown.
+
+### Options
+
+- `layerPath` The path to your layers directory. (Default: `./layers`)
+- `outputPath` The path to your output directory. (Default: `./output`)
+- `countFrom` Starts counting generated images from this number. (Default: `1`)
+- `outputAmount` The amount of images to generate. (Default: `0`) [Value `0` means no limit]
+- `randomize` Randomizes the output. (Default: `false`)
+- `layerOrder` The order of your layers.
 
 ## Supported File Formats
 
