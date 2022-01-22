@@ -1,5 +1,5 @@
 import {mkdir, readdir, readFile} from 'fs/promises';
-import {join} from 'path';
+import {join} from 'path/posix';
 import {parse} from 'yaml';
 import sizeOf from 'image-size';
 import * as glob from 'fast-glob';
