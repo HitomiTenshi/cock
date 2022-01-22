@@ -4,8 +4,7 @@
 /dist
 
 # Output
-output/*
-!output/.gitkeep
+/output
 
 # Node
 /node_modules
