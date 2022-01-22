@@ -15,7 +15,9 @@ async function main() {
   const missingDir = layerDirs.find(layerDir => !orderedDirs.includes(layerDir));
 
   if (missingDir) {
-    console.error(`Cannot find directory "${missingDir}"!`);
+    console.error(
+      `Cannot find layer directory "${missingDir}"! Check your config.yml file and add the correct directory names in the order that you need.`,
+    );
     return;
   }
 
