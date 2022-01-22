@@ -38,7 +38,7 @@ async function main() {
       );
     }
 
-    await fs.writeFile(`./output/${i}.png`, canvas.toBuffer());
+    await fs.writeFile(`./output/${i + 1}.png`, canvas.toBuffer());
   }
 }
 
