@@ -1,13 +1,10 @@
 import {mkdir, readdir, readFile} from 'fs/promises';
-import _sizeOf from 'image-size';
-import {promisify} from 'util';
+import sizeOf from 'image-size';
 import {parse} from 'yaml';
 import * as glob from 'fast-glob';
 import * as sharp from 'sharp';
 
 import {cartesian, LayerSize} from './lib';
-
-const sizeOf = promisify(_sizeOf);
 const BATCH_SIZE = 100;
 
 async function main() {
@@ -52,17 +49,22 @@ async function getLayerOrder() {
 
 async function getLayerImages(orderedDirs: string[]) {
   const layerImages = await Promise.all(orderedDirs.map(dir => glob(`./layers/${dir}/**/*.png`)));
-  return layerImages.filter(layer => layer.length > 0);
+
+  return Promise.all(
+    layerImages
+      .filter(layer => layer.length > 0)
+      .map(layer => Promise.all(layer.map(image => readFile(image)))),
+  );
 }
 
-async function getLayerSize(layerImages: string[][]) {
+async function getLayerSize(layerImages: Buffer[][]) {
   const layerSize = new LayerSize();
 
   await Promise.all(
     layerImages.map(layer =>
       Promise.all(
         layer.map(async image => {
-          const size = (await sizeOf(image)) as LayerSize;
+          const size = sizeOf(image) as LayerSize;
 
           if (layerSize.width < size.width) {
             layerSize.width = size.width;
@@ -79,7 +81,7 @@ async function getLayerSize(layerImages: string[][]) {
   return layerSize;
 }
 
-async function generateImages(imageCombinations: string[][], layerSize: LayerSize, index = 0) {
+async function generateImages(imageCombinations: Buffer[][], layerSize: LayerSize, index = 0) {
   const imageCombinationsBatch = imageCombinations.slice(index, index + BATCH_SIZE);
 
   if (imageCombinationsBatch.length > 0) {
